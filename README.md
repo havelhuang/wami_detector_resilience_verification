@@ -1,4 +1,4 @@
-## Verification and validation of WAMI moving vehicle detector
+## Resilience Verification of WAMI moving vehicle detector
 
 ### Dependencies: 
 
