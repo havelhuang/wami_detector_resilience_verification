@@ -22,12 +22,12 @@ class adv_objectt:
     self.ub_v=ub_v
 
 def mcdc(x, dnn, aveImg_binary, mcdc_cond_ratio=0.2, max_v=255, lb_v=-125.5, ub_v=125.5, opt=True):
-  x_test=np.array([x])
+  x_test=np.array(x)
   raw_data=raw_datat(x_test,None)
   test_object=test_objectt(dnn, raw_data, 'ssc', 'linf')
   test_object.cond_ratio=mcdc_cond_ratio
   adv_object=adv_objectt(max_v, lb_v, ub_v)
-  predictResults = dnn.predict(np.array([x]), verbose=1)
+  predictResults = dnn.predict(np.array(x), verbose=1)
   res=np.argmax(predictResults)
   f_results, layer_functions, cover_layers, _=ssc_setup(test_object, '/tmp/')
 
@@ -122,7 +122,7 @@ def mcdc(x, dnn, aveImg_binary, mcdc_cond_ratio=0.2, max_v=255, lb_v=-125.5, ub_
           simple_x=x.copy()
           for ii in range(0, i+1):
             simple_x[ii]=new_image[ii]
-          simple_predictResults = dnn.predict(np.array([simple_x]), batch_size=5000, verbose=1)
+          simple_predictResults = dnn.predict(np.array(simple_x), batch_size=5000, verbose=1)
           simple_res=np.argmax(simple_predictResults)
           if simple_res==res: continue
           #for ii in range(0, i+1):

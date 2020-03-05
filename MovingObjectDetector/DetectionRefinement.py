@@ -5,15 +5,9 @@ from sklearn.neighbors import NearestNeighbors
 import skimage.measure as measure
 import cv2
 from art.attacks.evasion.fast_gradient import FastGradientMethod
-from art.attacks.evasion.iterative_method import BasicIterativeMethod
+from DeepConcolic.src.mcdc import mcdc
 from art.attacks.evasion.deepfool import DeepFool
 from art.classifiers.keras import KerasClassifier
-if sys.platform == 'darwin':
-    from mcdc import mcdc
-else:
-    from DeepConcolic.src.mcdc import mcdc
-
-
 
 
 class DetectionRefinement:
@@ -69,13 +63,15 @@ class DetectionRefinement:
             classifier = KerasClassifier(self.model_binary)
             pred1 = np.argmax(classifier.predict(x_test), axis=1)
 
-            # Craft adversarial samples with FGSM
+            # # Craft adversarial samples with FGSM
             # epsilon = 50
             # adv_crafter = BasicIterativeMethod(classifier,eps= epsilon , eps_step=5, max_iter=1000)
             # x_test_adv = adv_crafter.generate(x = x_test)
             # X[self.refinementID] = x_test_adv
-            # pred2 = np.argmax(classifier.predict(x_test_adv), axis=1)
-            # res, X[self.refinementID] = mcdc(X[self.refinementID], self.model_binary, self.aveImg_binary, mcdc_cond_ratio=0.99)
+
+            # # Craft adversarial samples with DeepConcolic
+            # res, testSuite = mcdc(X[self.refinementID], self.model_binary, self.aveImg_binary, mcdc_cond_ratio=0.99)
+            # X[self.refinementID] = testSuite
 
             # Craft adversarial samples with DeepFool
             adv_crafter = DeepFool(classifier)

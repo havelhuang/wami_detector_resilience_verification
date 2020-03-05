@@ -9,7 +9,7 @@ from copy import copy
 from copy import deepcopy as deepcopy
 import scipy.io as sio
 from MovingObjectDetector.BackgroundModel import BackgroundModel
-from MovingObjectDetector.DetectionRefinement_baseline import DetectionRefinement
+from MovingObjectDetector.DetectionRefinement import DetectionRefinement
 from SimpleTracker.KalmanFilter import KalmanFilter
 from MovingObjectDetector.MOD_BaseFunctions import TimePropagate, TimePropagate_, draw_error_ellipse2d
 from MovingObjectDetector.Init_Track_From_Groundtruth import init_Track_From_Groundtruth
@@ -124,7 +124,7 @@ def run_detection_main_baseline(attack, model_folder, imagefolder, input_image_i
                                  BackgroundSubtractionProperties, model_binary, aveImg_binary, model_regression,
                                  aveImg_regression,attack)
         # dr.refinementID=refinementID
-        refinedDetections, refinedProperties = dr.doMovingVehicleRefinement()
+        refinedDetections, refinedProperties,ref = dr.doMovingVehicleRefinement()
         regressedDetections = dr.doMovingVehiclePositionRegression()
         regressedDetections = np.asarray(regressedDetections)
 
@@ -159,8 +159,9 @@ def run_detection_main_baseline(attack, model_folder, imagefolder, input_image_i
                 print("Data Association failed (No detection is assigned to this track)...")
             # here to play 'attack': to call the dr again with refinementID
             if isinstance(refinementID, np.int64) and (i > 5) and (i < 10):
-                dr.refinementID = refinementID
-                refinedDetections, refinedProperties = dr.doMovingVehicleRefinement()
+
+                dr.refinementID = [refinementID]
+                refinedDetections, refinedProperties, ref = dr.doMovingVehicleRefinement()
                 regressedDetections = dr.doMovingVehiclePositionRegression()
                 regressedDetections = np.asarray(regressedDetections)
                 perturbations.extend(dr.perturbations)
@@ -250,7 +251,7 @@ def run_detection_main_baseline(attack, model_folder, imagefolder, input_image_i
     res = diff_mean(track_store, track_attack_store)
     print("the average deviation is ", res)
 
-    sio.savemat('basic.mat', {'basic': kf_attack.uncertainty})
+    # sio.savemat('basic.mat', {'basic': kf_attack.uncertainty})
 
     # for i in range(1,21):
     #     plt.figure()

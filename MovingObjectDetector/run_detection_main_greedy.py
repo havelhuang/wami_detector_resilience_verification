@@ -304,7 +304,7 @@ def run_detection_main_greedy(attack, model_folder, imagefolder, input_image_idx
 
     endtime = timeit.default_timer()
     print("Processing Time (Total): " + str(endtime - starttime) + " s... ")
-    sio.savemat('greedy.mat', {'greedy': kf_attack.uncertainty})
+    # sio.savemat('greedy.mat', {'greedy': kf_attack.uncertainty})
 
     plt.figure()
     x = range(1,20)

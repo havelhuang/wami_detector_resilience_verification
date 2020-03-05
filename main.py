@@ -49,7 +49,7 @@ def main():
                       help="ROI_centre")
     parser.add_argument("--wasabi-image-folder", dest="imagefolder", default="WPAFB_images/training/",
                       help="ROI_centre")
-    parser.add_argument("--search_method", dest="search_method", default="exhaustive",
+    parser.add_argument("--search_method", dest="search_method", default="greedy",
                       help="baseline, greedy or exhaustive")
     parser.add_argument("--deepconcolic-folder", dest="deepconcolic", default="DeepConcolic/src/",
                       help="ROI_centre")
