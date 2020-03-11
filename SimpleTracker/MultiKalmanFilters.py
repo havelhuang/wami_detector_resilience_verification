@@ -71,8 +71,8 @@ class MultiKalmanFilters:
                 Vy = ele[1] - prev_ele[1]
                 V = np.sqrt((prev_ele-ele) @ (prev_ele-ele).T)
                 D = np.sqrt((p_xy.T-ele) @ (p_xy.T-ele).T)
-                if (V <= 30) and (D <= 300):
-                    new_KFs.append(KalmanFilter(np.array([ele[0], ele[1], Vx, Vy]).reshape((4, 1)), np.diag([15**2, 15**2, 10**2, 10**2]), 5, 6))
+                if (V <= 40) and (D <= 500):
+                    new_KFs.append(KalmanFilter(np.array([ele[0], ele[1], Vx, Vy]).reshape((4, 1)), np.diag([15**2, 15**2, 10**2, 10**2]), 3, 5))
         self.KalmanFilters = self.KalmanFilters + new_KFs
         return self
 

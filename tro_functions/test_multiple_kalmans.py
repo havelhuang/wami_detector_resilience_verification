@@ -25,9 +25,9 @@ from MovingObjectDetector.Init_Track_From_Groundtruth import init_Track_From_Gro
 # for testing
 imagefolder = 'E:/WPAFB-images/training/'
 model_folder = '../Models/'
-num_of_template = 3
+num_of_template = 4
 input_image_idx = 5
-ROI_centre = [4500, 4500]
+ROI_centre = [4500, 4000]
 ROI_window = 1000
 writeimagefolder = '../savefig/'
 attack = []
@@ -66,7 +66,7 @@ else:
     Init_Candidate_tracks = init_Track_From_Groundtruth(TransformationMatrices, frame_idx, (min_r, max_r, min_c, max_c))
 
 # initialise Kalman filter
-init_idx = 39
+init_idx = 18       # 39
 if init_idx >= len(Init_Candidate_tracks):
     init_idx = 0
     print("warning: the init track index is unavailable.")
@@ -74,16 +74,17 @@ x = Init_Candidate_tracks[init_idx][0]
 y = Init_Candidate_tracks[init_idx][1]
 vx = Init_Candidate_tracks[init_idx][2]
 vy = Init_Candidate_tracks[init_idx][3]
-kf = KalmanFilter(np.array([[x], [y], [vx], [vy]]), np.diag([15**2, 15**2, 10**2, 10**2]), 5, 6)
+kf = KalmanFilter(np.array([[x], [y], [vx], [vy]]), np.diag([15**2, 15**2, 10**2, 10**2]), 3, 5)
 mkf = MultiKalmanFilters()
+kf_old = deepcopy(kf)
 
 # start iterations
-# kf_attack = deepcopy(kf)
 track_attack_store = []
 track_store = []
+track_store_old = []
 perturbations = []
 starttime = timeit.default_timer()
-for i in range(1, 60):
+for i in range(1, 50):
     print("Starting the step %s:" % i)
 
     # Read input image
@@ -106,44 +107,56 @@ for i in range(1, 60):
     regressedDetections = dr.doMovingVehiclePositionRegression()
     regressedDetections = np.asarray(regressedDetections)
 
-
     # Kalman filter update
     # tracking without attack
-    kf.TimePropagate(Hs[num_of_template - 1])
-    mkf.TimePropagate(Hs[num_of_template - 1])
-
     kf.predict()
     mkf.predict()
+    kf_old.predict()
+
+    kf.TimePropagate(Hs[num_of_template - 1])
+    mkf.TimePropagate(Hs[num_of_template - 1])
+    kf_old.TimePropagate(Hs[num_of_template - 1])
 
     # kf.NearestNeighbourAssociator(regressedDetections)
     primaryTrack, primary_masurement_ID = mkf.MaximumLikelihoodAssociator(kf, regressedDetections)
     kf = primaryTrack
+    kf_old.NearestNeighbourAssociator(regressedDetections)
 
     kf.update()
     mkf.update()
+    kf_old.update()
 
     mkf.InitMultiKalmanFilters(kf)
 
     track_x = kf.mu_t[0, 0]
     track_y = kf.mu_t[1, 0]
+    track_old_x = kf_old.mu_t[0, 0]
+    track_old_y = kf_old.mu_t[1, 0]
     # propagate all detections
     track_store = TimePropagate(track_store, Hs[num_of_template - 1])
     track_store.append(np.array([track_x, track_y]).reshape(2, 1))
+
+    track_store_old = TimePropagate(track_store_old, Hs[num_of_template - 1])
+    track_store_old.append(np.array([track_old_x, track_old_y]).reshape(2, 1))
 
     # update background
     bgt.updateTemplate(input_image)
 
     # plt.figure()
-    minx = np.int32(track_x - 300)
+    minx = np.int32(track_old_x - 400)
+    # minx = 1
     if minx <= 0:
         minx = 1
-    miny = np.int32(track_y - 300)
+    miny = np.int32(track_old_y - 400)
+    # miny = 1
     if miny <= 0:
         miny = 1
-    maxx = np.int32(track_x + 301)
+    maxx = np.int32(track_old_x + 401)
+    # maxx = input_image.shape[1]
     if maxx >= input_image.shape[1]:
         maxx = input_image.shape[1]
-    maxy = np.int32(track_y + 301)
+    maxy = np.int32(track_old_y + 401)
+    # maxy = input_image.shape[0]
     if maxy >= input_image.shape[0]:
         maxy = input_image.shape[0]
     print("write roi image windows: " + str(miny) + "," + str(maxy) + "," + str(minx) + "," + str(maxx))
@@ -153,14 +166,20 @@ for i in range(1, 60):
     validRegressedDetections[:, 0] = validRegressedDetections[:, 0] - minx
     validRegressedDetections[:, 1] = validRegressedDetections[:, 1] - miny
     for thisDetection in validRegressedDetections:
-        if (thisDetection[0] > 0) and (thisDetection[0] < 600) and (thisDetection[1] > 0) and (thisDetection[1] < 600):
-            cv2.circle(roi_image, (thisDetection[0], thisDetection[1]), 3, (100, 100, 0), -1)
+        if (thisDetection[0] > 0) and (thisDetection[0] < 2500) and (thisDetection[1] > 0) and (thisDetection[1] < 2500):
+            cv2.circle(roi_image, (thisDetection[0], thisDetection[1]), 3, (178, 255, 102), -1)
     for idx in range(1, len(track_store)):
         point1x = np.int32(track_store[idx - 1][0, 0]) - minx
         point1y = np.int32(track_store[idx - 1][1, 0]) - miny
         point2x = np.int32(track_store[idx][0, 0]) - minx
         point2y = np.int32(track_store[idx][1, 0]) - miny
-        cv2.line(roi_image, (point1x, point1y), (point2x, point2y), (0, 255, 0), 2)
+        cv2.line(roi_image, (point1x, point1y), (point2x, point2y), (0, 255, 255), 1)
+    for idx in range(1, len(track_store_old)):
+        point1x = np.int32(track_store_old[idx - 1][0, 0]) - minx
+        point1y = np.int32(track_store_old[idx - 1][1, 0]) - miny
+        point2x = np.int32(track_store_old[idx][0, 0]) - minx
+        point2y = np.int32(track_store_old[idx][1, 0]) - miny
+        cv2.line(roi_image, (point1x, point1y), (point2x, point2y), (128, 255, 0), 1)
     cv2.imwrite(writeimagefolder + "%05d.png" % i, roi_image)
 
     print('-------------------------------------------------------------------------------------------------------')

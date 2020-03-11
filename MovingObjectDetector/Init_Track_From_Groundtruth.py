@@ -47,7 +47,7 @@ def init_Track_From_Groundtruth(trans_matrices, frame_number: int, window: tuple
         x = now_Xs[i] - min_x
         y = now_Ys[i] - min_y
         tmp_id = now_ids[i]
-        if (x > 300) & (x < width-300) & (y > 300) & (y < height-300):
+        if (x > 200) & (x < width-200) & (y > 200) & (y < height-200):
             ind = np.where(prev_ids == tmp_id)
             if len(ind) > 0:
                 vel_x = x - (prev_Xs_tonow[ind][0] - min_x)
