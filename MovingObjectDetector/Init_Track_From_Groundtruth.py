@@ -59,7 +59,7 @@ def init_Track_From_Groundtruth(trans_matrices, frame_number: int, window: tuple
         Image_part = np.repeat(np.expand_dims(Image[min_y:max_y+1, min_x:max_x+1], -1), 3, axis=2)
         font = cv2.FONT_HERSHEY_SIMPLEX
         for i, track in enumerate(Candidate_tracks):
-            cv2.putText(Image_part, str(i), (track[0], track[1]), font, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(Image_part, str(i), (track[0], track[1]), font, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
         plt.figure()
         plt.imshow(Image_part)
         plt.show()

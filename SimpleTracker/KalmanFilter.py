@@ -1,5 +1,7 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from scipy.stats import multivariate_normal
+
 
 class KalmanFilter:
 
@@ -42,18 +44,38 @@ class KalmanFilter:
         self.sigma_t = sigma_t_t
         return mu_t_t, sigma_t_t
 
-    def NearestNeighbourAssociator(self, measurements):
-        gate = np.sqrt(self.sigma_tplus1[0,0] + self.sigma_tplus1[1,1]) *3
+    def clearAssociation(self):
+        self.z = []
+        return self
+
+    def DirectAssociator(self, measurement):
+        self.z = measurement.reshape(2, 1)
+        return self
+
+    def NearestNeighbourAssociator(self, measurements, gate_ll=1e-4):
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(measurements)
         distance, index = nbrs.kneighbors(self.predict_z.reshape(1, -1))
-        if distance > gate:
+        z_ = measurements[index].reshape(2, 1)
+        S = self.H @ self.sigma_tplus1 @ self.H.transpose() + self.R
+        ll = multivariate_normal.pdf(np.squeeze(z_), np.squeeze(self.predict_z), S)
+        if ll <= gate_ll:
             print("No data association...")
             self.z = []
             measurementID = None
         else:
-            self.z = measurements[index].reshape(2, 1)
+            self.z = z_
             measurementID = index[0][0]
         return measurementID
+
+    def LLs_with_all_measurements(self, measurements):
+        LLs = []
+        S = self.H @ self.sigma_tplus1 @ self.H.transpose() + self.R
+        for measurement in measurements:
+            z_ = measurement.reshape(2, 1)
+            ll = multivariate_normal.pdf(np.squeeze(z_), np.squeeze(self.predict_z), S)
+            LLs.append(ll)
+        return np.array(LLs)
+
 
     def TimePropagate(self, transformation_matrix):
         x = self.mu_t[0, 0]
