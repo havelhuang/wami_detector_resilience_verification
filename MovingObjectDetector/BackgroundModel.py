@@ -36,12 +36,17 @@ class BackgroundModel:
     def getCompensatedImages(self):
         return self.CompensatedImages
 
-    def updateTemplate(self, new_image):
+    def updateTemplate(self, new_image, H_=None):
         num_of_templates = self.num_of_templates
         self.templates[0:num_of_templates-1] = self.templates[1:num_of_templates]
         self.templates[num_of_templates-1] = new_image
         self.Hs[0:num_of_templates-1] = self.Hs[1:num_of_templates]
-        self.Hs[num_of_templates-1] = []
+        if H_ is None:
+            self.Hs[num_of_templates-1] = []
+        else:
+            self.Hs[num_of_templates - 1] = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            for i, m in enumerate(self.Hs):
+                self.Hs[i] = H_ @ m
         return
 
     def doBackgroundSubtraction(self, input_image, thres=10):

@@ -25,8 +25,8 @@ class DetectionRefinement:
         self.aveImg_binary = aveImg_binary
         self.model_regression = model_regression
         self.aveImg_regression = aveImg_regression
-        self.refinedDetectionsID = []
-        self.regressedDetectionID = []
+        self.ID_refinement2background = []
+        self.ID_regression2refinement = []
         self.perturbations = []
         self.refinementID=None
         self.attack = attack
@@ -52,6 +52,7 @@ class DetectionRefinement:
                 data_tminus3 = np.reshape(self.img_tminus3[miny:maxy, minx:maxx], (1, 21, 21))
                 X[i] = np.concatenate((data_t, data_tminus1, data_tminus2, data_tminus3), axis=0)
                 mask1[i] = True
+        # mask 1 for valid background subtraction detections.
         X = X[mask1, ...]
         detections = self.original_detections[mask1, ...]
         X, _ = bf.DataNormalisationZeroCentred(X, self.aveImg_binary)
@@ -87,14 +88,13 @@ class DetectionRefinement:
                     diff = np.sqrt(sum(np.square(x1 - x2))) / (x_test.shape[2]*x_test.shape[3])
                     self.perturbations.append(diff)
 
-
             if (pred1 == pred2).all():
                 ref = 1
 
             self.refinementID = None
 
         predictResults = self.model_binary.predict(X, batch_size=1000, verbose=0)
-
+        # mask 2 for CNN refined detections
         mask2 = np.zeros(len(predictResults), dtype=np.bool)
         for idx in range(len(predictResults)):
             thisResult = predictResults[idx]
@@ -102,7 +102,8 @@ class DetectionRefinement:
                 mask2[idx] = True
         refinedDetections = detections[mask2, ...]
         refinedProperties = []
-        self.refinedDetectionsID = np.where(mask2)[0]
+        self.ID_refinement2background = np.where(mask2)[0]
+        # mask 3 to combine mask 1 and 2
         mask3 = mask1
         mask3[mask1] = mask2
         for i, thisProperty in enumerate(self.bgProperties):
@@ -118,7 +119,7 @@ class DetectionRefinement:
         width = img_shape[1]
         height = img_shape[0]
         regressedDetections = []
-        regressedDetectionsID = []
+        ID_regression2refinement = []
         processedDetections = np.zeros((len(self.detections)), dtype=np.bool)
         nbrs = NearestNeighbors(n_neighbors=10, algorithm='kd_tree').fit(self.detections)
         for i, thisdetection in enumerate(self.detections):
@@ -132,7 +133,7 @@ class DetectionRefinement:
                     regressedDetections.append([thisdetection[0], thisdetection[1]])
                     if neiIdx != i:
                         print("The nearest point should be itself...")
-                    regressedDetectionsID.append(i)
+                    ID_regression2refinement.append(i)
                 elif len(neiIdx) > 1:
                     neiCentres = self.detections[neiIdx]
                     MeanCentre = np.mean(neiCentres, axis=0)
@@ -152,15 +153,15 @@ class DetectionRefinement:
                         X = np.concatenate((data_t, data_tminus1, data_tminus2, data_tminus3), axis=0)
                         X = np.expand_dims(X, axis=0)
                         X, _ = bf.DataNormalisationZeroCentred(X, self.aveImg_regression)
-                        if ("regression" in self.attack) and not (self.refinementID is None):
-                            res, X[0] = mcdc_regression_linf(X[0], self.model_regression, self.aveImg_regression, regression_threshold = 0.1, mcdc_cond_ratio=0.99)
+                        # if ("regression" in self.attack) and not (self.refinementID is None):
+                        #     res, X[0] = mcdc_regression_linf(X[0], self.model_regression, self.aveImg_regression, regression_threshold = 0.1, mcdc_cond_ratio=0.99)
                         RegressionResult = self.model_regression.predict(X, batch_size=1, verbose=0)
                         RegressionResult = cv2.resize(np.reshape(RegressionResult, (15, 15)), (45, 45))
                         MaxRegressionValue = np.max(RegressionResult)
                         tmpxy = np.where(RegressionResult == MaxRegressionValue)
                         tmpDetections = []
                         tmpDetections.append([tmpxy[1][0]+minx, tmpxy[0][0]+miny])
-                        regressedDetectionsID.append(neiIdx)
+                        ID_regression2refinement.append(neiIdx)
                         MaxRegressionValue -= 0.1
                         while MaxRegressionValue >= 0.25:
                             RegressionResult_bw = RegressionResult >= MaxRegressionValue
@@ -174,10 +175,10 @@ class DetectionRefinement:
                                 tmpy = tmpy+miny
                                 if not ismember([tmpx, tmpy], tmpDetections):
                                     tmpDetections.append([tmpx, tmpy])
-                                    regressedDetectionsID.append(neiIdx)
+                                    ID_regression2refinement.append(neiIdx)
                             MaxRegressionValue -= 0.1
                         regressedDetections.extend(tmpDetections)
-        self.regressedDetectionID = regressedDetectionsID
+        self.ID_regression2refinement = ID_regression2refinement
         return regressedDetections
 
 
